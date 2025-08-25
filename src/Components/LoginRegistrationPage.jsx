@@ -153,28 +153,52 @@ const LoginRegistrationPage = () => {
         // }
 
         try {
+
+            const requestData = isLogin
+                ? {
+                    // Login: only send email and password
+                    email: formData.email,
+                    password: formData.password
+                }
+                : {
+                    // Registration: send all form data
+                    ...formData,
+                    emailVerified: verifications.email,
+                    phoneVerified: verifications.phone
+                };
+
             const response = await fetch('https://2rabhvljg9.execute-api.eu-north-1.amazonaws.com/prod/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(requestData)
             });
 
             const result = await response.json();
 
             if (response.ok) {
-                console.log('Registration successful:', result);
+                const actionText = isLogin ? 'Login' : 'Registration';
+                console.log(`${actionText} successful:`, result);
+
                 navigate('/user', { state: { ...result?.user } });
 
                 // Handle success (redirect, show success message, etc.)
             } else {
-                console.error('Registration failed:', result.error);
+                const actionText = isLogin ? 'Login' : 'Registration';
+                console.error(`${actionText} failed:`, result.error);
                 // Handle error (show error message)
+                setErrors(prev => ({
+                    ...prev,
+                    submit: result.error || `${actionText} failed. Please try again.`
+                }));
             }
         } catch (error) {
             console.error('Network error:', error);
-            // Handle network error
+            setErrors(prev => ({
+                ...prev,
+                submit: 'Network error. Please check your connection and try again.'
+            }));
         }
     };
 
@@ -214,6 +238,7 @@ const LoginRegistrationPage = () => {
                         onClick={() => {
                             setIsLogin(true);
                             setRegistrationMethod('manual');
+                            setErrors({});
                         }}
                         className={`flex-1 py-2.5 px-4 rounded-md font-medium transition-all text-sm ${isLogin
                             ? 'bg-blue-600 text-white shadow-lg'
@@ -226,6 +251,7 @@ const LoginRegistrationPage = () => {
                         onClick={() => {
                             setIsLogin(false);
                             setRegistrationMethod('manual');
+                            setErrors({});
                         }}
                         className={`flex-1 py-2.5 px-4 rounded-md font-medium transition-all text-sm ${!isLogin
                             ? 'bg-blue-600 text-white shadow-lg'
@@ -562,7 +588,12 @@ const LoginRegistrationPage = () => {
 
                                 </>
                             )}
-
+                            {/* Submit Error Display */}
+                            {errors.submit && (
+                                <div className="p-3 bg-red-900 bg-opacity-30 border border-red-500 rounded-lg">
+                                    <p className="text-red-300 text-sm">{errors.submit}</p>
+                                </div>
+                            )}
                             <button
                                 onClick={handleSubmit}
                                 disabled={!isLogin && (!isPasswordStrong || formData.password !== formData.confirmPassword)}
